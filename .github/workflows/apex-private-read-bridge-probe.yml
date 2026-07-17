@@ -1,0 +1,25 @@
+name: APEX Public Runner Bridge Probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apex-private-read-bridge-probe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm public runner capacity
+        run: echo "PUBLIC_RUNNER_READY"
+      - name: Require private read bridge
+        env:
+          PRIVATE_READ_TOKEN: ${{ secrets.APEX_PRIVATE_READ_TOKEN || secrets.GH_PAT }}
+        run: test -n "$PRIVATE_READ_TOKEN"
+      - name: Confirm bridge without exposing value
+        run: echo "PRIVATE_READ_BRIDGE_READY"
