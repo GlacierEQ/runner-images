@@ -8,7 +8,7 @@ on:
       - .github/workflows/apex-private-read-bridge-probe.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   probe:
@@ -21,5 +21,28 @@ jobs:
         env:
           PRIVATE_READ_TOKEN: ${{ secrets.APEX_PRIVATE_READ_TOKEN || secrets.GH_PAT }}
         run: test -n "$PRIVATE_READ_TOKEN"
-      - name: Confirm bridge without exposing value
-        run: echo "PRIVATE_READ_BRIDGE_READY"
+      - name: Checkout receipt branch
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          persist-credentials: true
+      - name: Publish bridge readiness receipt
+        run: |
+          set -euo pipefail
+          mkdir -p receipts
+          {
+            echo "runner_repo=${GITHUB_REPOSITORY}"
+            echo "runner_sha=${GITHUB_SHA}"
+            echo "run_id=${GITHUB_RUN_ID}"
+            echo "private_read_bridge=ready"
+            echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > receipts/APEX_PRIVATE_READ_BRIDGE_READY.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add receipts/APEX_PRIVATE_READ_BRIDGE_READY.txt
+          if git diff --cached --quiet; then
+            echo "Receipt already current"
+          else
+            git commit -m "receipt(runner): private-read bridge ready"
+            git push origin HEAD:main
+          fi
